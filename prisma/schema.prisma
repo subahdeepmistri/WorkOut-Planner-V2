@@ -1,0 +1,379 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanTier {
+  FREE
+  PRO
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum SessionStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  DISCARDED
+  LOCKED
+}
+
+enum WorkoutBlockType {
+  WARMUP
+  STRENGTH
+  CARDIO
+  COOLDOWN
+}
+
+enum ExerciseType {
+  STRENGTH
+  CARDIO
+  MOBILITY
+}
+
+enum MuscleGroup {
+  CHEST
+  BACK
+  LEGS
+  SHOULDERS
+  ARMS
+  CORE
+  GLUTES
+  CALVES
+  FULL_BODY
+  CARDIO
+}
+
+enum PRMetric {
+  HEAVIEST_WEIGHT
+  MAX_REPS
+  BEST_VOLUME
+  LONGEST_DURATION
+}
+
+enum ThemePreference {
+  SYSTEM
+  LIGHT
+  DARK
+}
+
+enum WeightUnit {
+  KG
+  LB
+}
+
+model User {
+  id                    String                @id @default(cuid())
+  authUserId            String                @unique
+  email                 String                @unique
+  displayName           String?
+  avatarUrl             String?
+  timezone              String                @default("UTC")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  workoutTemplates      WorkoutTemplate[]
+  workoutSessions       WorkoutSession[]
+  sessionStats          SessionStats[]
+  personalRecords       PersonalRecord[]
+  achievements          Achievement[]
+  streak                Streak?
+  bodyFocusDistribution BodyFocusDistribution[]
+  settings              Settings?
+  subscription          Subscription?
+  analyticsEvents       AnalyticsEvent[]
+  referralCode          ReferralCode?
+  sentReferrals         ReferralConversion[]  @relation("Referrer")
+  receivedReferral      ReferralConversion[]  @relation("Referred")
+  backups               CloudBackup[]
+  emailNotifications    EmailNotification[]
+
+  @@map("users")
+}
+
+model WorkoutTemplate {
+  id             String       @id @default(cuid())
+  userId         String
+  name           String
+  description    String?
+  isLocked       Boolean      @default(false)
+  targetDuration Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises      Exercise[]
+  sessions       WorkoutSession[]
+
+  @@index([userId])
+  @@map("workout_templates")
+}
+
+model WorkoutSession {
+  id                 String             @id @default(cuid())
+  userId             String
+  templateId         String?
+  sessionDate        DateTime
+  status             SessionStatus      @default(DRAFT)
+  startedAt          DateTime?
+  endedAt            DateTime?
+  durationSeconds    Int                @default(0)
+  notes              String?
+  lockReason         String?
+  disciplineScore    Int                @default(0)
+  recoveryWarning    Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template           WorkoutTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sets               ExerciseSet[]
+  stats              SessionStats?
+  personalRecords    PersonalRecord[]
+  analyticsEvents    AnalyticsEvent[]
+
+  @@index([userId, sessionDate])
+  @@index([templateId])
+  @@map("workout_sessions")
+}
+
+model Exercise {
+  id                  String          @id @default(cuid())
+  templateId          String?
+  name                String
+  muscleGroup         MuscleGroup
+  exerciseType        ExerciseType
+  blockType           WorkoutBlockType
+  orderInTemplate     Int             @default(0)
+  restSecondsDefault  Int             @default(90)
+  aiSuggestedDeltaKg  Decimal?        @db.Decimal(5, 2)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  template            WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  sets                ExerciseSet[]
+  records             PersonalRecord[]
+
+  @@index([templateId, orderInTemplate])
+  @@map("exercises")
+}
+
+model ExerciseSet {
+  id                 String         @id @default(cuid())
+  sessionId          String
+  exerciseId         String
+  setNumber          Int
+  isWarmup           Boolean        @default(false)
+  targetReps         Int?
+  completedReps      Int?
+  targetWeightKg     Decimal?       @db.Decimal(6, 2)
+  completedWeightKg  Decimal?       @db.Decimal(6, 2)
+  targetDurationSec  Int?
+  completedDurationSec Int?
+  restSeconds        Int            @default(90)
+  isCompleted        Boolean        @default(false)
+  completedAt        DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  session            WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise           Exercise       @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+
+  @@index([sessionId, exerciseId])
+  @@index([sessionId, setNumber])
+  @@map("exercise_sets")
+}
+
+model SessionStats {
+  id                    String         @id @default(cuid())
+  userId                 String
+  sessionId              String         @unique
+  totalVolumeKg          Decimal        @default(0) @db.Decimal(10, 2)
+  totalSets              Int            @default(0)
+  totalReps              Int            @default(0)
+  totalDurationSec       Int            @default(0)
+  averageIntensity       Decimal        @default(0) @db.Decimal(5, 2)
+  cardioMinutes          Int            @default(0)
+  warmupCompleted        Boolean        @default(false)
+  cooldownCompleted      Boolean        @default(false)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session                WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("session_stats")
+}
+
+model PersonalRecord {
+  id          String         @id @default(cuid())
+  userId      String
+  exerciseId  String
+  sessionId   String?
+  metric      PRMetric
+  value       Decimal        @db.Decimal(10, 2)
+  achievedAt  DateTime       @default(now())
+  createdAt   DateTime       @default(now())
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise    Exercise       @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  session     WorkoutSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, metric, achievedAt])
+  @@index([exerciseId])
+  @@map("personal_records")
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  userId      String
+  code        String
+  title       String
+  description String
+  icon        String
+  unlockedAt  DateTime @default(now())
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, code])
+  @@index([userId, unlockedAt])
+  @@map("achievements")
+}
+
+model Streak {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  currentDays     Int      @default(0)
+  longestDays     Int      @default(0)
+  lastWorkoutDate DateTime?
+  freezeTokens    Int      @default(0)
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
+
+model BodyFocusDistribution {
+  id         String   @id @default(cuid())
+  userId     String
+  monthStart DateTime
+  chest      Int      @default(0)
+  back       Int      @default(0)
+  legs       Int      @default(0)
+  shoulders  Int      @default(0)
+  arms       Int      @default(0)
+  core       Int      @default(0)
+  cardio     Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, monthStart])
+  @@map("body_focus_distribution")
+}
+
+model Settings {
+  id                  String          @id @default(cuid())
+  userId              String          @unique
+  theme               ThemePreference @default(SYSTEM)
+  weightUnit          WeightUnit      @default(KG)
+  notifications       Boolean         @default(true)
+  emailNotifications  Boolean         @default(true)
+  hapticFeedback      Boolean         @default(true)
+  autoLockWorkout     Boolean         @default(false)
+  restTimerDefaultSec Int             @default(90)
+  updatedAt           DateTime        @updatedAt
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("settings")
+}
+
+model Subscription {
+  id                    String             @id @default(cuid())
+  userId                String             @unique
+  tier                  PlanTier           @default(FREE)
+  status                SubscriptionStatus @default(TRIALING)
+  stripeCustomerId      String?            @unique
+  stripeSubscriptionId  String?            @unique
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean            @default(false)
+  trialEndsAt           DateTime?
+  updatedAt             DateTime           @updatedAt
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model AnalyticsEvent {
+  id         String          @id @default(cuid())
+  userId     String?
+  sessionId  String?
+  eventName  String
+  category   String
+  properties Json?
+  createdAt  DateTime        @default(now())
+  user       User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  session    WorkoutSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([eventName, createdAt])
+  @@index([userId, createdAt])
+  @@map("analytics_events")
+}
+
+model ReferralCode {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  code        String   @unique
+  totalUses   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("referral_codes")
+}
+
+model ReferralConversion {
+  id              String        @id @default(cuid())
+  referrerUserId  String
+  referredUserId  String
+  subscriptionId  String?
+  convertedAt     DateTime      @default(now())
+  referrer        User          @relation("Referrer", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  referred        User          @relation("Referred", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerUserId, referredUserId])
+  @@index([convertedAt])
+  @@map("referral_conversions")
+}
+
+model CloudBackup {
+  id          String   @id @default(cuid())
+  userId      String
+  storagePath String
+  checksum    String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("cloud_backups")
+}
+
+model EmailNotification {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String
+  payload    Json
+  sentAt     DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("email_notifications")
+}

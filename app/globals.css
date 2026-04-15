@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 40% 98%;
+  --foreground: 222 48% 11%;
+  --muted: 214 28% 91%;
+  --card: 0 0% 100%;
+  --primary: 222 87% 56%;
+  --secondary: 189 94% 43%;
+  --accent: 36 92% 58%;
+  --success: 152 60% 42%;
+  --danger: 0 80% 57%;
+  --border: 215 25% 84%;
+  --ring: 222 87% 56%;
+}
+
+.dark {
+  --background: 224 52% 7%;
+  --foreground: 220 21% 94%;
+  --muted: 223 32% 17%;
+  --card: 224 34% 12%;
+  --primary: 202 100% 63%;
+  --secondary: 168 76% 45%;
+  --accent: 36 93% 63%;
+  --success: 152 56% 48%;
+  --danger: 0 73% 56%;
+  --border: 221 23% 24%;
+  --ring: 202 100% 63%;
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+  font-family: "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", sans-serif;
+  background-image:
+    radial-gradient(at 15% 12%, hsl(var(--primary) / 0.14) 0px, transparent 40%),
+    radial-gradient(at 88% 84%, hsl(var(--secondary) / 0.1) 0px, transparent 45%);
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.45);
+  border-radius: 999px;
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.2);
+}
+
+@layer components {
+  .glass-card {
+    @apply rounded-xl border border-border/70 bg-card/85 backdrop-blur;
+    box-shadow: 0 20px 35px -30px rgba(5, 14, 29, 0.65);
+  }
+
+  .stat-chip {
+    @apply inline-flex items-center rounded-full border border-border/70 bg-muted/60 px-3 py-1 text-xs font-semibold;
+  }
+}
