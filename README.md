@@ -1,4 +1,4 @@
-# PulseForge Workout SaaS
+# WorkOut-Planner-V2
 
 Premium workout tracking SaaS/mobile-ready app built on Next.js 15, TypeScript, Tailwind, Zustand, Supabase, PostgreSQL, Prisma, and Stripe.
 
