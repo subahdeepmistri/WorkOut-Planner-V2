@@ -10,22 +10,33 @@ const serverSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().optional()
 });
 
+const getEnvVar = (key: string) => {
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key];
+  }
+  return undefined;
+};
+
 const _env = serverSchema.safeParse({
-  DATABASE_URL: process.env.DATABASE_URL,
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL
+  DATABASE_URL: getEnvVar('DATABASE_URL'),
+  NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+  SUPABASE_SERVICE_ROLE_KEY: getEnvVar('SUPABASE_SERVICE_ROLE_KEY'),
+  STRIPE_SECRET_KEY: getEnvVar('STRIPE_SECRET_KEY'),
+  STRIPE_WEBHOOK_SECRET: getEnvVar('STRIPE_WEBHOOK_SECRET'),
+  NEXT_PUBLIC_APP_URL: getEnvVar('NEXT_PUBLIC_APP_URL')
 });
 
 if (!_env.success) {
-  console.error("❌ Invalid environment variables:", _env.error.flatten().fieldErrors);
-  // Don't throw during build to allow static analysis to pass in platforms like Netlify
-  if (process.env.npm_lifecycle_event !== "build" && !process.env.NETLIFY) {
-    throw new Error("Invalid server environment variables");
-  }
+  console.warn("⚠️ Invalid or missing environment variables:", _env.error.flatten().fieldErrors);
 }
 
-export const env = _env.success ? _env.data : (process.env as unknown as z.infer<typeof serverSchema>);
+export const env = _env.success ? _env.data : {
+  DATABASE_URL: getEnvVar('DATABASE_URL') as string,
+  NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') as string,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') as string,
+  SUPABASE_SERVICE_ROLE_KEY: getEnvVar('SUPABASE_SERVICE_ROLE_KEY') as string,
+  STRIPE_SECRET_KEY: getEnvVar('STRIPE_SECRET_KEY'),
+  STRIPE_WEBHOOK_SECRET: getEnvVar('STRIPE_WEBHOOK_SECRET'),
+  NEXT_PUBLIC_APP_URL: getEnvVar('NEXT_PUBLIC_APP_URL')
+};

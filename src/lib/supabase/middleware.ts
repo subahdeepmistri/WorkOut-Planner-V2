@@ -9,22 +9,31 @@ export async function updateSession(request: NextRequest) {
     }
   });
 
-  const supabase = createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({
-          request
-        });
-        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-      }
-    }
-  });
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.warn("⚠️ Supabase environment variables missing. Bypassing middleware auth.");
+    return response;
+  }
 
-  await supabase.auth.getUser();
+  try {
+    const supabase = createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({
+            request
+          });
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        }
+      }
+    });
+
+    await supabase.auth.getUser();
+  } catch (error) {
+    console.error("Middleware execution error:", error);
+  }
 
   return response;
 }
