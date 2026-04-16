@@ -32,10 +32,10 @@ if (!_env.success) {
 }
 
 export const env = _env.success ? _env.data : {
-  DATABASE_URL: getEnvVar('DATABASE_URL') as string,
-  NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') as string,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') as string,
-  SUPABASE_SERVICE_ROLE_KEY: getEnvVar('SUPABASE_SERVICE_ROLE_KEY') as string,
+  DATABASE_URL: getEnvVar('DATABASE_URL') || "postgresql://postgres:postgres@localhost:5432/placeholder",
+  NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') || "https://placeholder.supabase.co",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') || "placeholder-anon-key",
+  SUPABASE_SERVICE_ROLE_KEY: getEnvVar('SUPABASE_SERVICE_ROLE_KEY') || "placeholder-service-key",
   STRIPE_SECRET_KEY: getEnvVar('STRIPE_SECRET_KEY'),
   STRIPE_WEBHOOK_SECRET: getEnvVar('STRIPE_WEBHOOK_SECRET'),
   NEXT_PUBLIC_APP_URL: getEnvVar('NEXT_PUBLIC_APP_URL')

@@ -8,7 +8,8 @@ declare global {
 export const prisma =
   global.prisma ||
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"]
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    datasourceUrl: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/placeholder"
   });
 
 if (process.env.NODE_ENV !== "production") {
